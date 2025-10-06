@@ -1,9 +1,18 @@
+/* eslint-env browser */
+/* global document, requestAnimationFrame, innerWidth, innerHeight, addEventListener */
 // Suno Prompt Studio Main JS (Modularized)
-// NOTE: Set your Gemini API Key in api-key.js ( NOT in this file )
-import { GEMINI_API_KEY } from './api-key.js';
+// NOTE: Attempts to dynamically import optional ./api-key.js. If missing, runs in "static mode" (Gemini enhancement disabled unless backend proxy provided).
 
-(() => {
-  'use strict';
+(async () => {
+  let GEMINI_API_KEY = '';
+  try {
+    const mod = await import('./api-key.js').catch(() => null);
+    if (mod && typeof mod.GEMINI_API_KEY === 'string') {
+      GEMINI_API_KEY = mod.GEMINI_API_KEY;
+    }
+  } catch {
+    // silent: file optional
+  }
   // --- STARFIELD & ORBITING EMOJI BUDDIES ---
   const bg = document.getElementById('bg'), g = bg.getContext('2d');
   let W, H, CX, CY, stars = [];
@@ -80,7 +89,8 @@ import { GEMINI_API_KEY } from './api-key.js';
         const j = await r.json();
         return j.text || j.error || '백엔드 응답을 파싱하지 못했습니다.';
       } catch (e) {
-        return `백엔드 호출 실패: ${e.message} (배포 환경에서 서버 프록시가 구성되었는지 확인)`;
+        return '현재 정적 배포 모드이며 Gemini 백엔드가 설정되어 있지 않습니다.\n' +
+          '옵션: (1) server.js 기반 Express 프록시 배포 / (2) api-key.js 추가 (공개 노출 위험) / (3) Cloud Run 동적 서버 버전 사용.';
       }
     }
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
