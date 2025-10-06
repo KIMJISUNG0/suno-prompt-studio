@@ -57,10 +57,13 @@
         (() => {
             "use strict";
             // =================================================================
-            // ✨ GEMINI API KEY - IMPORTANT ✨
-            // =================================================================
-            // Please paste your Gemini API Key here.
-            const GEMINI_API_KEY = "AIzaSyAttljG5dpSJWR7QY20Ah7N1gs9ZcRmVd8";
+            // 🔐 Secure Mode (Proxy)
+            // Gemini API Key has been REMOVED from the client to prevent exposure.
+            // Deploy the Node proxy (server.js) and set this to that service URL.
+            // Example (Cloud Run): https://sps-api-xxxx-uc.a.run.app/api/gemini
+            // If the proxy is served from the SAME origin (same domain), you can just use '/api/gemini'.
+            const PROXY_ENDPOINT = '/api/gemini'; // Change to full URL if different origin.
+            // If you accidentally leave the placeholder pattern in place, user gets a warning.
             // =================================================================
 
             // --- STARFIELD & FRIENDS ANIMATION ---
@@ -77,36 +80,26 @@
             function finishModal() { modal.classList.add('hidden'); if (ctx.onDone) { ctx.onDone(ctx.multi ? Array.from(ctx.sel) : Array.from(ctx.sel)[0]) } }
             
             async function callGeminiAPI(localPrompt) {
-                if (!GEMINI_API_KEY || GEMINI_API_KEY === "여기에 API 키를 붙여넣으세요") {
-                    return "오류: Gemini API 키가 설정되지 않았습니다. 코드 상단에서 키를 입력해주세요.";
+                if (!localPrompt || !localPrompt.trim()) return '프롬프트가 비어 있습니다.';
+                if (PROXY_ENDPOINT.includes('YOUR_PROXY_HOST')) {
+                    return '⚠️ PROXY_ENDPOINT 설정 필요: server.js 배포 후 해당 URL 로 수정하세요.';
                 }
-                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
-                
-                const systemPrompt = `You are a creative writer and expert music prompt engineer for Suno AI. Your task is to transform a structured, tag-based prompt into a single, rich, and evocative paragraph.
-
-                **Core Objective:**
-                - Your main goal is to vividly expand on the user's chosen 'MOOD'. Weave the specified instruments and other details into this mood-focused narrative. Describe *how* the instruments contribute to the atmosphere, rather than just listing them.
-                - Synthesize and combine elements where possible to create a natural, flowing sentence structure.
-
-                **Strict Output Rules:**
-                - **MUST** produce only ONE final paragraph. Do not offer multiple options, drafts, or variations.
-                - **MUST NOT** use conversational intros like "Okay, here is..." or any explanatory text.
-                - **MUST NOT** use markdown (like *, **).
-                - **MUST** always integrate the tempo (BPM) naturally into the description.
-                - **MUST** use natural language instead of comma-separated lists.`;
-
                 try {
-                    const response = await fetch(API_URL, {
+                    const resp = await fetch(PROXY_ENDPOINT, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: `Enhance this music prompt: "${localPrompt}"` }] }], systemInstruction: { parts: [{ text: systemPrompt }] } })
+                        headers: {
+                            'Content-Type': 'application/json'
+                            // 'Authorization': 'Bearer YOUR_OPTIONAL_ACCESS_TOKEN' // <- If ACCESS_TOKEN enabled on server
+                        },
+                        body: JSON.stringify({ prompt: localPrompt })
                     });
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                    const data = await response.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini로부터 응답을 받지 못했습니다."
-                } catch (error) {
-                    console.error("Gemini API Error:", error);
-                    return `Gemini API 호출 중 오류 발생: ${error.message}`
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok) {
+                        return `서버 오류: ${data.error || resp.status}`;
+                    }
+                    return data.text || '빈 응답';
+                } catch (e) {
+                    return '네트워크 오류: ' + e.message;
                 }
             }
 
