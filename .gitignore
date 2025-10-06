@@ -1,0 +1,8 @@
+# Local API key file
+api-key.js
+
+# Build artifacts
+/dist
+
+# Node modules (if later adding tooling)
+node_modules

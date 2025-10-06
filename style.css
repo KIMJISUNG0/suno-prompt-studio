@@ -1,0 +1,15 @@
+:root { --ac: 234 89% 72%; --surf: 0 0% 100%/0.06; --bd: 0 0% 100%/0.12; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { font-family: 'Inter', 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.glass { background: hsl(var(--surf)); -webkit-backdrop-filter: saturate(180%) blur(16px); backdrop-filter: saturate(180%) blur(16px); border: 1px solid hsl(var(--bd)); }
+.chip { padding: .45rem .75rem; border-radius: 12px; font-size: .9rem; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .06); transition: .12s; }
+.chip[data-selected=true] { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .28); }
+.iconbtn { background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); }
+#bg { position: fixed; inset: 0; z-index: -1; background: radial-gradient(1200px 800px at 50% 40%, #0a0a12 0%, #06060a 45%, #010108 100%); cursor: default; }
+.field { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .6rem .9rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .06); }
+.field span { opacity: .9; }
+.field .mini { opacity: .7; font-size: .85rem; }
+.toast { position: fixed; inset: auto 0 20px 0; display: grid; place-items: center; pointer-events: none; }
+.toast>div { pointer-events: auto; }
+.loader { border: 2px solid rgba(255,255,255,0.2); border-top-color: hsl(var(--ac)); border-radius: 50%; width: 1.5rem; height: 1.5rem; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
