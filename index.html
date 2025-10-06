@@ -38,6 +38,7 @@
                     <svg id="icon-volume-up" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                     <svg id="icon-volume-off" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
                 </button>
+                <button id="token-btn" class="iconbtn rounded-lg px-3 py-1.5 text-xs font-medium" aria-label="Set API Access Token" title="프록시 보호 토큰 설정">🔒 Token</button>
                 <div class="inline-flex bg-white/5 rounded-xl p-1" role="tablist" aria-label="Mode switch">
                     <button id="seg-ai" class="px-3 md:px-4 py-1.5 rounded-lg text-sm font-medium data-[active=true]:bg-white/20" data-active="true" aria-selected="true" role="tab">AI 가이드</button>
                     <button id="seg-pro" class="px-3 md:px-4 py-1.5 rounded-lg text-sm font-medium" role="tab">프로 스튜디오</button>
@@ -99,7 +100,22 @@
         function finishModal(){modal.classList.add('hidden');if(ctx.onDone){ctx.onDone(ctx.multi?Array.from(ctx.sel):Array.from(ctx.sel)[0])}}
 
         // === Secure Gemini Proxy Call ===
-        async function callGeminiAPI(localPrompt){ if(!localPrompt||!localPrompt.trim()) return '프롬프트가 비어 있습니다.'; try{ const res=await fetch(PROXY_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'/*,'Authorization':'Bearer YOUR_SHARED_TOKEN'*/},body:JSON.stringify({prompt:localPrompt})}); const data=await res.json().catch(()=>({})); if(!res.ok) return `서버 오류: ${data.error||res.status}`; return data.text?.replace(/[*#]/g,'')||'Gemini 응답이 비어 있습니다.'; }catch(e){ return '네트워크 오류: '+e.message; } }
+        // === Shared Secret Token (optional) ===
+        const tokenBtn=document.getElementById('token-btn');
+        let ACCESS_TOKEN = localStorage.getItem('sps_access_token') || '';
+        function updateTokenButton(){tokenBtn.classList.toggle('bg-[hsl(var(--ac))]/30',!!ACCESS_TOKEN); tokenBtn.textContent = ACCESS_TOKEN? '🔓 Token✓' : '🔒 Token';}
+        updateTokenButton();
+        tokenBtn.onclick=()=>{
+            const cur = ACCESS_TOKEN;
+            const next = prompt('프록시 보호용 공유 토큰 입력 (비우면 해제):', cur||'');
+            if(next===null) return; // cancel
+            ACCESS_TOKEN = (next||'').trim();
+            if(ACCESS_TOKEN) localStorage.setItem('sps_access_token', ACCESS_TOKEN); else localStorage.removeItem('sps_access_token');
+            updateTokenButton();
+            showToast(ACCESS_TOKEN? '토큰 저장됨' : '토큰 제거됨');
+        };
+
+        async function callGeminiAPI(localPrompt){ if(!localPrompt||!localPrompt.trim()) return '프롬프트가 비어 있습니다.'; try{ const headers={'Content-Type':'application/json'}; if(ACCESS_TOKEN) headers['Authorization']='Bearer '+ACCESS_TOKEN; const res=await fetch(PROXY_ENDPOINT,{method:'POST',headers,body:JSON.stringify({prompt:localPrompt})}); const data=await res.json().catch(()=>({})); if(!res.ok) return `서버 오류: ${data.error||res.status}`; return data.text?.replace(/[*#]/g,'')||'Gemini 응답이 비어 있습니다.'; }catch(e){ return '네트워크 오류: '+e.message; } }
 
         // === Data ===
         const genreMap={'Funk':['Soul Funk','Neo-Soul','G-Funk','Acid Jazz'],'Jazz':['Bebop','Cool Jazz','Swing','Fusion','Big Band'],'K-Pop':['Girl Group Dance','Boy Group Hip Hop','K-Ballad','K-R&B','K-Indie'],'J-Pop':['City Pop','Shibuya-kei','J-Rock','Anime Song','Vocaloid'],'Synthpop':['Synthwave','Futurepop','Darkwave','Chillwave'],'Rock':['Alternative Rock','Indie Rock','Punk Rock','Heavy Metal','Psychedelic Rock'],'Hip Hop':['Trap','Boom Bap','Lo-fi Hip Hop','Drill','G-Funk'],'EDM':['House','Deep House','Tech House','Techno','Trance','Dubstep','Future Bass'],'Drum & Bass':['Liquid DnB','Neurofunk','Jungle','Jump-Up'],'R&B':['Contemporary R&B','Neo-Soul','Alternative R&B','PBR&B','K-R&B'],'Ballad':['Pop Ballad','Rock Ballad','Soul Ballad','K-Ballad']};
