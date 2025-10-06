@@ -71,13 +71,22 @@ import { GEMINI_API_KEY } from './api-key.js';
 
   // --- Gemini API ---
   async function callGeminiAPI(localPrompt) {
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_GEMINI_API_KEY_HERE') {
-      return '오류: Gemini API 키가 설정되지 않았습니다. api-key.js 파일을 확인하세요.';
+    // Backend proxy mode: if no real key present, attempt POST /api/gemini
+    const usingPlaceholder = !GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_GEMINI_API_KEY_HERE';
+    if (usingPlaceholder) {
+      try {
+        const r = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: localPrompt }) });
+        if (!r.ok) throw new Error(`Backend API ${r.status}`);
+        const j = await r.json();
+        return j.text || j.error || '백엔드 응답을 파싱하지 못했습니다.';
+      } catch (e) {
+        return `백엔드 호출 실패: ${e.message} (배포 환경에서 서버 프록시가 구성되었는지 확인)`;
+      }
     }
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
-    const systemPrompt = `You are a creative writer and expert music prompt engineer for Suno AI. Your task is to transform a structured, tag-based prompt into a single, rich, and evocative paragraph.\n\n**Core Objective:**\n- Your main goal is to vividly expand on the user's chosen 'MOOD'. Weave the specified instruments and other details into this mood-focused narrative. Describe *how* the instruments contribute to the atmosphere, rather than just listing them.\n- Synthesize and combine elements where possible to create a natural, flowing sentence structure.\n\n**Strict Output Rules:**\n- **MUST** produce only ONE final paragraph. Do not offer multiple options, drafts, or variations.\n- **MUST NOT** use conversational intros like "Okay, here is..." or any explanatory text.\n- **MUST NOT** use markdown (like *, **).\n- **MUST** always integrate the tempo (BPM) naturally into the description.\n- **MUST** use natural language instead of comma-separated lists.`;
+    const systemPrompt = `You are a creative writer and expert music prompt engineer for Suno AI. Your task is to transform a structured, tag-based prompt into a single, rich, and evocative paragraph.\n\n**Core Objective:**\n- Your main goal is to vividly expand on the user's chosen 'MOOD'. Weave the specified instruments and other details into this mood-focused narrative. Describe *how* the instruments contribute to the atmosphere, rather than just listing them.\n- Synthesize and combine elements where possible to create a natural, flowing sentence structure.\n\n**Strict Output Rules:**\n- **MUST** produce only ONE final paragraph. Do not offer multiple options, drafts, or variations.\n- **MUST NOT** use conversational intros like \"Okay, here is...\" or any explanatory text.\n- **MUST NOT** use markdown (like *, **).\n- **MUST** always integrate the tempo (BPM) naturally into the description.\n- **MUST** use natural language instead of comma-separated lists.`;
     try {
-      const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `Enhance this music prompt: "${localPrompt}"` }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }) });
+      const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `Enhance this music prompt: \"${localPrompt}\"` }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }) });
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
       const data = await response.json();
       return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Gemini로부터 응답을 받지 못했습니다.';
