@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import fetch from 'node-fetch';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,44 +10,33 @@ const app = express();
 app.use(express.json());
 
 const GEM_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
-// 프로 권한이 있으면 환경변수로 덮어쓰고, 없으면 flash 기본
-const PRIMARY_MODEL = (process.env.GEMINI_MODEL || '').trim(); // 기본값 제거
+const PRIMARY_MODEL = (process.env.GEMINI_MODEL || 'gemini-pro').trim();
+const RAW_FALLBACKS = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-pro').split(',').map(s => s.trim()).filter(Boolean);
 
-// 환경변수로 커스터마이즈 가능: GEMINI_MODEL_FALLBACKS
-const FALLBACK_MODELS = (process.env.GEMINI_MODEL_FALLBACKS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+const cleanName = (m) => m.replace(/-latest$/,'').trim();
+const FALLBACK_MODELS = Array.from(new Set([ cleanName(PRIMARY_MODEL), ...RAW_FALLBACKS.map(cleanName) ]));
 
-const DEBUG = !!process.env.DEBUG_ERRORS;
-const log = (...args) => { if (DEBUG) console.log('[gemini]', ...args); };
-async function generateWithModel(model, prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${GEM_API_KEY}`;
+const DEBUG = String(process.env.DEBUG_ERRORS || '').toLowerCase() === '1';
+
+async function genWithModel(model, prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(GEM_API_KEY)}`;
   const body = {
-    contents: [
-      {
-        role: "user",
-        parts: [ { text: prompt } ]
-      }
-    ]
+    contents: [{ role: "user", parts: [{ text: prompt }]}]
   };
-  const started = Date.now();
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error?.message || res.statusText);
-    }
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Empty response');
-    return { text: text.trim(), latency: Date.now()-started };
-  } catch (err) {
-    throw { model, error: err.message || String(err), latency: Date.now()-started };
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`HTTP ${r.status} ${r.statusText} — ${txt.slice(0,500)}`);
   }
+  const j = await r.json();
+  const parts = j.candidates?.[0]?.content?.parts || [];
+  const text = parts.map(p => p.text).filter(Boolean).join('\n').trim();
+  if (!text) throw new Error('Empty response');
+  return text;
 }
 
 app.get('/api/status', (_req, res) => {
@@ -69,52 +58,39 @@ app.get('/api/status', (_req, res) => {
 });
 
 app.post('/api/gemini', async (req, res) => {
-  if (!GEM_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+  if (!GEM_API_KEY) return res.status(500).json({ ok:false, error:'Missing GEMINI_API_KEY' });
   const prompt = (req.body?.prompt || '').trim();
-  if (!prompt) return res.status(400).json({ error: 'Empty prompt' });
+  if (!prompt) return res.status(400).json({ ok:false, error:'Empty prompt' });
+
   const start = Date.now();
-
-  // 환경변수에서만 모델명 읽기, 없으면 안내 메시지 반환
-  const modelList = [PRIMARY_MODEL, ...FALLBACK_MODELS].filter(Boolean);
   const tried = [];
-  const errors = [];
-  let result = null;
-  let usedModel = null;
+  let lastErr;
 
-  if (modelList.length === 0) {
-    return res.status(400).json({ error: 'No model specified. Set GEMINI_MODEL or GEMINI_MODEL_FALLBACKS in environment.' });
-  }
-
-  for (const modelName of modelList) {
-    tried.push(modelName);
+  for (const model of FALLBACK_MODELS) {
+    tried.push(model);
     try {
-      const r = await generateWithModel(modelName, prompt);
-      result = r;
-      usedModel = modelName;
-      break;
-    } catch (err) {
-      errors.push(err);
-      log('fail model', modelName, err.error);
+      const modelStart = Date.now();
+      const text = await genWithModel(model, prompt);
+      return res.json({
+        ok: true,
+        text,
+        model,
+        tried,
+        ms: Date.now() - start,
+        modelMs: Date.now() - modelStart
+      });
+    } catch (e) {
+      lastErr = e;
+      if (DEBUG) console.error('[gemini]', model, 'failed:', String(e).slice(0,500));
     }
   }
-  if (result) {
-    return res.json({
-      text: result.text,
-      model: usedModel,
-      tried,
-      latency: result.latency,
-      ms: Date.now() - start
-    });
-  } else {
-    const lastErr = errors[errors.length-1] || {};
-    res.status(500).json({
-      error: 'Failed to generate content from Gemini API',
-      tried,
-      errors,
-      lastError: lastErr.error,
-      ms: Date.now() - start
-    });
-  }
+  return res.status(500).json({
+    ok:false,
+    error:'Gemini request failed',
+    tried,
+    ms: Date.now() - start,
+    detail: DEBUG && lastErr ? String(lastErr).slice(0,500) : undefined
+  });
 });
 
 app.use(express.static(__dirname));
