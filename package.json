@@ -1,0 +1,17 @@
+{
+  "name": "suno-prompt-studio-server",
+  "version": "1.0.0",
+  "description": "Backend server for Suno Prompt Studio to securely call Gemini API.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

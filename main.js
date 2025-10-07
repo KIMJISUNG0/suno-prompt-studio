@@ -4,15 +4,6 @@
 // NOTE: Attempts to dynamically import optional ./api-key.js. If missing, runs in "static mode" (Gemini enhancement disabled unless backend proxy provided).
 
 (async () => {
-  let GEMINI_API_KEY = '';
-  try {
-    const mod = await import('./api-key.js').catch(() => null);
-    if (mod && typeof mod.GEMINI_API_KEY === 'string') {
-      GEMINI_API_KEY = mod.GEMINI_API_KEY;
-    }
-  } catch {
-    // silent: file optional
-  }
   // --- STARFIELD & ORBITING EMOJI BUDDIES ---
   const bg = document.getElementById('bg'), g = bg.getContext('2d');
   let W, H, CX, CY, stars = [];
@@ -80,27 +71,22 @@
 
   // --- Gemini API ---
   async function callGeminiAPI(localPrompt) {
-    // Backend proxy mode: if no real key present, attempt POST /api/gemini
-    const usingPlaceholder = !GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_GEMINI_API_KEY_HERE';
-    if (usingPlaceholder) {
-      try {
-        const r = await fetch('/api/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: localPrompt }) });
-        if (!r.ok) throw new Error(`Backend API ${r.status}`);
-        const j = await r.json();
-        return j.text || j.error || '백엔드 응답을 파싱하지 못했습니다.';
-      } catch (e) {
-        return '현재 정적 배포 모드이며 Gemini 백엔드가 설정되어 있지 않습니다.\n' +
-          '옵션: (1) server.js 기반 Express 프록시 배포 / (2) api-key.js 추가 (공개 노출 위험) / (3) Cloud Run 동적 서버 버전 사용.';
-      }
-    }
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
-    const systemPrompt = `You are a creative writer and expert music prompt engineer for Suno AI. Your task is to transform a structured, tag-based prompt into a single, rich, and evocative paragraph.\n\n**Core Objective:**\n- Your main goal is to vividly expand on the user's chosen 'MOOD'. Weave the specified instruments and other details into this mood-focused narrative. Describe *how* the instruments contribute to the atmosphere, rather than just listing them.\n- Synthesize and combine elements where possible to create a natural, flowing sentence structure.\n\n**Strict Output Rules:**\n- **MUST** produce only ONE final paragraph. Do not offer multiple options, drafts, or variations.\n- **MUST NOT** use conversational intros like \"Okay, here is...\" or any explanatory text.\n- **MUST NOT** use markdown (like *, **).\n- **MUST** always integrate the tempo (BPM) naturally into the description.\n- **MUST** use natural language instead of comma-separated lists.`;
     try {
-      const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `Enhance this music prompt: \"${localPrompt}\"` }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }) });
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Gemini로부터 응답을 받지 못했습니다.';
-    } catch (error) { console.error('Gemini API Error:', error); return `Gemini API 호출 중 오류 발생: ${error.message}` }
+      const r = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: localPrompt })
+      });
+      if (!r.ok) {
+        const errBody = await r.json().catch(() => ({ error: `Backend API Error: ${r.status}` }));
+        throw new Error(errBody.error || `Backend API Error: ${r.status}`);
+      }
+      const j = await r.json();
+      return j.text || j.error || '백엔드 응답을 파싱하지 못했습니다.';
+    } catch (e) {
+      console.error('Backend API Error:', e);
+      return `API 호출에 실패했습니다: ${e.message}`;
+    }
   }
 
   // --- AI Mode State ---
