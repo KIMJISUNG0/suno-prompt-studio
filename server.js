@@ -11,13 +11,12 @@ app.use(express.json());
 
 const GEM_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
 // 프로 권한이 있으면 환경변수로 덮어쓰고, 없으면 flash 기본
-const PRIMARY_MODEL = (process.env.GEMINI_MODEL || 'gemini-1.5-flash').trim();
+const PRIMARY_MODEL = (process.env.GEMINI_MODEL || 'gemini-pro').trim();
 
-// 환경변수로 커스터마이즈 가능: GEMINI_MODEL_FALLBACKS="gemini-1.5-flash,gemini-1.5-flash-8b,gemini-1.5-pro"
-// -latest 변형은 현재 generateContent() 에서 404 빈도가 높아 기본 필터링
-const FALLBACK_MODELS = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-1.5-pro')
+// 환경변수로 커스터마이즈 가능: GEMINI_MODEL_FALLBACKS="gemini-pro"
+const FALLBACK_MODELS = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-pro')
   .split(',')
-  .map(s => s.replace(/-latest$/,'').trim())
+  .map(s => s.trim())
   .filter(Boolean);
 
 const DEBUG = !!process.env.DEBUG_ERRORS;
@@ -117,5 +116,5 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 11000;
 app.listen(PORT, () => console.log('[server] listening on', PORT, 'primary:', PRIMARY_MODEL, 'fallbacks:', FALLBACK_MODELS.join(',')));
