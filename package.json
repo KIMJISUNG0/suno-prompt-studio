@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "@google/generative-ai": "^0.17.0"
+  "node-fetch": "^3.3.2"
   }
 }
