@@ -1,0 +1,78 @@
+:root {
+    --primary-color: #4A90E2;
+    --secondary-color: #50E3C2;
+    --background-color: #14151b;
+    --text-color: #FFFFFF;
+    --border-color: rgba(255, 255, 255, 0.12);
+}
+
+body {
+    font-family: 'Inter', 'Noto Sans KR', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.button {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: var(--secondary-color);
+}
+
+.field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    color: var(--text-color);
+    transition: opacity 0.5s;
+}
+
+.loader {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

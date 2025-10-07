@@ -1,8 +1,5 @@
-# Dependencies
-/node_modules
 
-# Environment variables
+node_modules
 .env
-
-# Local API key file
-api-key.js
+*.log
+dist

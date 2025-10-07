@@ -1,45 +1,68 @@
-const express = require('express');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-require('dotenv').config();
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3000;
-
-// Gemini API 클라이언트 초기화
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// JSON 요청 본문을 파싱하고 정적 파일을 서비스하기 위한 미들웨어
 app.use(express.json());
-app.use(express.static(__dirname));
 
-// API 엔드포인트: /api/gemini
+const GEM_API_KEY = process.env.GEMINI_API_KEY || '';
+const PRIMARY_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const FALLBACK_MODELS = [
+  PRIMARY_MODEL,
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-pro',
+  'gemini-1.5-pro-latest'
+];
+
+app.get('/api/status', (_req, res) => {
+  res.json({
+    ok: true,
+    hasKey: !!GEM_API_KEY,
+    primary: PRIMARY_MODEL,
+    fallbacks: FALLBACK_MODELS,
+    debug: !!process.env.DEBUG_ERRORS
+  });
+});
+
 app.post('/api/gemini', async (req, res) => {
-  try {
-    const { prompt } = req.body;
+  if (!GEM_API_KEY) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+  const prompt = (req.body?.prompt || '').trim();
+  if (!prompt) return res.status(400).json({ error: 'Empty prompt' });
 
-    if (!prompt) {
-      return res.status(400).send({ error: 'Prompt is required' });
+  const genAI = new GoogleGenerativeAI(GEM_API_KEY);
+  const systemInstruction = 'Refine structured music prompts. Plain text only.';
+  let lastErr;
+
+  for (const modelName of FALLBACK_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName, systemInstruction });
+      const t0 = Date.now();
+      const result = await model.generateContent(prompt);
+      const text = result.response?.text?.();
+      if (!text) throw new Error('Empty response');
+      return res.json({
+        text: text.replace(/[*#]/g, '').trim(),
+        model: modelName,
+        ms: Date.now() - t0
+      });
+    } catch (e) {
+      lastErr = e;
     }
-
-    // API에 전달할 시스템 프롬프트
-    const systemPrompt = `You are a creative writer and expert music prompt engineer for Suno AI. Your task is to transform a structured, tag-based prompt into a single, rich, and evocative paragraph.\n\n**Core Objective:**\n- Your main goal is to vividly expand on the user's chosen 'MOOD'. Weave the specified instruments and other details into this mood-focused narrative. Describe *how* the instruments contribute to the atmosphere, rather than just listing them.\n- Synthesize and combine elements where possible to create a natural, flowing sentence structure.\n\n**Strict Output Rules:**\n- **MUST** produce only ONE final paragraph. Do not offer multiple options, drafts, or variations.\n- **MUST NOT** use conversational intros like \"Okay, here is...\" or any explanatory text.\n- **MUST NOT** use markdown (like *, **).\n- **MUST** always integrate the tempo (BPM) naturally into the description.\n- **MUST** use natural language instead of comma-separated lists.`;
-
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-pro',
-      systemInstruction: systemPrompt,
-    });
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    res.send({ text: text });
-  } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    res.status(500).send({ error: 'Failed to generate content from Gemini API' });
   }
+  res.status(500).json({
+    error: 'Failed to generate content from Gemini API',
+    detail: process.env.DEBUG_ERRORS ? String(lastErr) : undefined
+  });
 });
 
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}`);
+app.use(express.static(__dirname));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log('[server] listening on', PORT));

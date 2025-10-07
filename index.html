@@ -85,7 +85,33 @@
         // === Secure Gemini Proxy Call (public mode: no token) ===
         const ACCESS_TOKEN = '';
 
-        async function callGeminiAPI(localPrompt){ if(!localPrompt||!localPrompt.trim()) return '프롬프트가 비어 있습니다.'; try{ const headers={'Content-Type':'application/json'}; if(ACCESS_TOKEN) headers['Authorization']='Bearer '+ACCESS_TOKEN; const res=await fetch(PROXY_ENDPOINT,{method:'POST',headers,body:JSON.stringify({prompt:localPrompt})}); const data=await res.json().catch(()=>({})); if(!res.ok) return `서버 오류: ${data.error||res.status}`; return data.text?.replace(/[*#]/g,'')||'Gemini 응답이 비어 있습니다.'; }catch(e){ return '네트워크 오류: '+e.message; } }
+        // Gemini 호출: 에러 상세(detail) 및 힌트 표시 개선
+        async function callGeminiAPI(localPrompt){
+            if(!localPrompt||!localPrompt.trim()) return '프롬프트가 비어 있습니다.';
+            try{
+                const headers={'Content-Type':'application/json'};
+                if(ACCESS_TOKEN) headers['Authorization']='Bearer '+ACCESS_TOKEN;
+                const started=performance.now();
+                const res=await fetch(PROXY_ENDPOINT,{
+                    method:'POST',
+                    headers,
+                    body:JSON.stringify({prompt:localPrompt})
+                });
+                const data=await res.json().catch(()=>({}));
+                const ms=Math.round(performance.now()-started);
+                if(!res.ok){
+                    let msg=`서버 오류(${res.status}) : ${data.error||'Unknown'}\n`;
+                    if(data.detail) msg+=`상세: ${data.detail}\n`;
+                    if(data.hint) msg+=`힌트: ${data.hint}\n`;
+                    msg+=`(⏱ ${ms}ms)`;
+                    return msg.trim();
+                }
+                const text=data.text?.replace(/[*#]/g,'')||'Gemini 응답이 비어 있습니다.';
+                return `${text}\n\n(모델: ${data.model||'unknown'} | 시도: ${(data.tried||[]).join(', ')||'-'} | ⏱ ${ms}ms)`;
+            }catch(e){
+                return '네트워크 오류: '+e.message;
+            }
+        }
 
         // === Data ===
         const genreMap={'Funk':['Soul Funk','Neo-Soul','G-Funk','Acid Jazz'],'Jazz':['Bebop','Cool Jazz','Swing','Fusion','Big Band'],'K-Pop':['Girl Group Dance','Boy Group Hip Hop','K-Ballad','K-R&B','K-Indie'],'J-Pop':['City Pop','Shibuya-kei','J-Rock','Anime Song','Vocaloid'],'Synthpop':['Synthwave','Futurepop','Darkwave','Chillwave'],'Rock':['Alternative Rock','Indie Rock','Punk Rock','Heavy Metal','Psychedelic Rock'],'Hip Hop':['Trap','Boom Bap','Lo-fi Hip Hop','Drill','G-Funk'],'EDM':['House','Deep House','Tech House','Techno','Trance','Dubstep','Future Bass'],'Drum & Bass':['Liquid DnB','Neurofunk','Jungle','Jump-Up'],'R&B':['Contemporary R&B','Neo-Soul','Alternative R&B','PBR&B','K-R&B'],'Ballad':['Pop Ballad','Rock Ballad','Soul Ballad','K-Ballad']};

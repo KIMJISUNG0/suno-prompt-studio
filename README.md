@@ -1,22 +1,52 @@
-# Suno Prompt Studio (Standalone)
+# Suno Prompt Studio
 
-프롬프트를 단계적으로 구성하고 Gemini API를 이용해 보강 문장을 생성하는 웹 UI입니다.
+Suno Prompt Studio is a web application designed to assist users in generating music prompts using AI technology. This project provides a user-friendly interface for selecting genres, instruments, effects, and more to create customized music prompts.
 
-## 기능
-- AI 가이드 모드: 장르/무드/악기/구조 기반 단계별 프롬프트 구성
-- 프로 스튜디오 모드: 세부 사운드 요소 직접 선택 후 프롬프트 생성
-- Gemini API 호출을 통한 단일 자연어 문단 보강
-- JSON 저장 및 클립보드 통합 복사
-- 캔버스 스타필드 + 이모지 오브젝트 인터랙션
+## Project Structure
 
-## 사용 방법
-1. `api-key.js` 파일에서 `GEMINI_API_KEY` 값을 실제 키로 교체
-2. 단순 정적 호스팅 (예: VSCode Live Server, Vite, nginx 등) 으로 `index.html` 열기
-3. AI 가이드 또는 프로 스튜디오 모드에서 프롬프트 생성 후 Gemini 결과 확인
+```
+suno-prompt-studio
+├── index.html          # Main HTML document for the application
+├── assets
+│   ├── css
+│   │   └── styles.css  # CSS styles for the application
+│   ├── js
+│   │   └── script.js    # JavaScript code for interactive functionality
+│   └── images
+│       └── favicon.svg  # Favicon for the application
+├── README.md           # Documentation for the project
+└── package.json        # Configuration file for npm
+```
 
-## 배포 시 주의
-- API Key는 반드시 서버 프록시 등을 통해 보호하는 것을 권장 (현재는 클라이언트 직접 호출 데모)
-- CORS 정책에 따라 브라우저 호출이 제한될 수 있으니 필요 시 백엔드 래퍼 구현
+## Setup Instructions
 
-## 라이선스
-MIT (필요 시 수정)
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd suno-prompt-studio
+   ```
+
+2. **Install dependencies**:
+   Make sure you have Node.js installed. Then run:
+   ```bash
+   npm install
+   ```
+
+3. **Run the application**:
+   You can start the application using:
+   ```bash
+   npm start
+   ```
+
+## Usage
+
+- Open `index.html` in your web browser to access the Suno Prompt Studio application.
+- Follow the on-screen instructions to create your music prompts.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
