@@ -11,10 +11,10 @@ app.use(express.json());
 
 const GEM_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
 // 프로 권한이 있으면 환경변수로 덮어쓰고, 없으면 flash 기본
-const PRIMARY_MODEL = (process.env.GEMINI_MODEL || 'gemini-pro').trim();
+const PRIMARY_MODEL = (process.env.GEMINI_MODEL || '').trim(); // 기본값 제거
 
-// 환경변수로 커스터마이즈 가능: GEMINI_MODEL_FALLBACKS="gemini-pro"
-const FALLBACK_MODELS = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-pro')
+// 환경변수로 커스터마이즈 가능: GEMINI_MODEL_FALLBACKS
+const FALLBACK_MODELS = (process.env.GEMINI_MODEL_FALLBACKS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
@@ -74,12 +74,18 @@ app.post('/api/gemini', async (req, res) => {
   if (!prompt) return res.status(400).json({ error: 'Empty prompt' });
   const start = Date.now();
 
+  // 환경변수에서만 모델명 읽기, 없으면 안내 메시지 반환
+  const modelList = [PRIMARY_MODEL, ...FALLBACK_MODELS].filter(Boolean);
   const tried = [];
   const errors = [];
   let result = null;
   let usedModel = null;
-  for (const modelName of [PRIMARY_MODEL, ...FALLBACK_MODELS.filter(m => m !== PRIMARY_MODEL)]) {
-    if (!modelName) continue;
+
+  if (modelList.length === 0) {
+    return res.status(400).json({ error: 'No model specified. Set GEMINI_MODEL or GEMINI_MODEL_FALLBACKS in environment.' });
+  }
+
+  for (const modelName of modelList) {
     tried.push(modelName);
     try {
       const r = await generateWithModel(modelName, prompt);
