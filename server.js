@@ -11,8 +11,8 @@ app.use(express.json());
 
 // Gemini API 키를 코드에 직접 삽입
 const GEM_API_KEY = 'AIzaSyD5a-tlQDGxE7BRamVmVbmwsUxmCzdnYdM';
-const PRIMARY_MODEL = (process.env.GEMINI_MODEL || 'gemini-pro').trim();
-const RAW_FALLBACKS = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-pro').split(',').map(s => s.trim()).filter(Boolean);
+const PRIMARY_MODEL = 'gemini-2.5-flash-preview-05-20';
+const RAW_FALLBACKS = ['gemini-2.5-flash-preview-05-20'];
 
 const cleanName = (m) => m.replace(/-latest$/,'').trim();
 const FALLBACK_MODELS = Array.from(new Set([ cleanName(PRIMARY_MODEL), ...RAW_FALLBACKS.map(cleanName) ]));

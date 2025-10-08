@@ -104,6 +104,25 @@
     if (aiState.step === 2) { card.appendChild(H('Step 2: 세부 장르 선택')); card.appendChild(field('세부 장르', aiState.sub, () => openModal({ title: 'SUBGENRE 선택', list: genreMap[aiState.genre], multi: false, onDone: (pick) => { if (!pick) return; aiState.sub = pick; renderAI() } }))) }
     if (aiState.step === 3) { card.appendChild(H('Step 3: 핵심악기 구성')); let items = ['Drums', 'Bass', 'Guitar', 'Piano', 'Synthesizer', 'Strings', 'Contrabass', 'Saxophone']; if (aiState.genre === 'Drum & Bass') { items = ['Drums', 'Reese Bass', 'Sub Bass', 'FM Growl', 'Wobble Lead', 'Pads', 'Atmos Pad', 'Arp Synth'] } card.appendChild(pills(items, aiState.core)) }
     if (aiState.step === 4) { card.appendChild(H('Step 4: 퍼커션 & FX')); let items = ['Bongo', 'Conga', 'Tambourine', 'Shaker', 'Claves', 'Riser', 'Impact', 'White Noise', 'Vinyl Crackle']; if (aiState.genre === 'Drum & Bass') { items = ['Riser', 'Downlifter', 'White Noise', 'Reverb Tail', 'Noise Sweep', 'Snare Roll', 'Reverse Cymbal'] } card.appendChild(pills(items, aiState.perk)) }
+      if (aiState.step === 4) {
+        // 선택된 FX를 하단에 리스트로 즉시 표시 (삭제 가능)
+        if (aiState.perk.size > 0) {
+          const fxListWrap = document.createElement('div');
+          fxListWrap.className = 'mt-2 flex flex-wrap gap-2';
+          Array.from(aiState.perk).forEach((fx) => {
+            const fxItem = document.createElement('div');
+            fxItem.className = 'flex items-center bg-white/5 border border-white/10 rounded-xl px-3 py-1';
+            fxItem.innerHTML = `<span>${fx}</span>`;
+            const delBtn = document.createElement('button');
+            delBtn.className = 'ml-2 text-red-300/90 hover:text-red-200 text-xs';
+            delBtn.textContent = '삭제';
+            delBtn.onclick = () => { aiState.perk.delete(fx); renderAI(); };
+            fxItem.appendChild(delBtn);
+            fxListWrap.appendChild(fxItem);
+          });
+          card.appendChild(fxListWrap);
+        }
+      }
     if (aiState.step === 5) { card.appendChild(H('Step 5: 보컬 & 키워드')); const row = document.createElement('div'); row.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 mt-2'; const vocList = aiState.genre === 'Drum & Bass' ? ['Instrumental', 'Vocal Chop', 'Male Vocal', 'Female Vocal'] : ['Male Vocal', 'Female Vocal', 'Instrumental']; const vocWrap = field('보컬', aiState.vocal, () => openModal({ title: 'VOCAL 선택', list: vocList, multi: false, onDone: (pick) => { if (pick) aiState.vocal = pick; renderAI() } })); const kw = document.createElement('input'); kw.placeholder = '노래 주제 키워드'; kw.value = aiState.keywords || ''; kw.className = 'w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2'; kw.oninput = () => aiState.keywords = kw.value; row.appendChild(vocWrap); row.appendChild(kw); card.appendChild(row) }
     if (aiState.step === 6) { card.appendChild(H('Step 6: 무드, BPM, 구조')); const moodsBase = ['Warm', 'Dreamy', 'Groovy', 'Dark', 'Sparkly', 'Vintage']; const dnbMoods = ['Euphoric', 'Atmospheric', 'Neuro', 'Liquid', 'Rollers']; const moodList = aiState.genre === 'Drum & Bass' ? moodsBase.concat(dnbMoods) : moodsBase; card.appendChild(pills(moodList, aiState.mood)); const ctrl = document.createElement('div'); ctrl.className = 'grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3'; const bpmDefault = aiState.genre === 'Drum & Bass' ? 174 : aiState.bpm; ctrl.innerHTML = `<label class='block text-sm'>BPM <input id='bpm' type='number' value='${bpmDefault}' class='mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2'></label><label class='block text-sm sm:col-span-2'>구조 <span class='block text-[11px] text-neutral-400 mt-1'>Intro, Drop, Break, Build, Outro 등</span></label>`; aiState.bpm = bpmDefault; card.appendChild(ctrl); ctrl.querySelector('#bpm').oninput = e => aiState.bpm = +e.target.value || bpmDefault; const structList = aiState.genre === 'Drum & Bass' ? ['Intro', 'Build', 'Drop', 'Roller', 'Break', 'Second Drop', 'Outro'] : ['Intro', 'Verse', 'Pre-Chorus', 'Chorus', 'Bridge', 'Breakdown', 'Outro']; card.appendChild(pills(structList, aiState.structure)) }
     if (aiState.step === 7) { card.appendChild(H('Step 7: 프롬프트 생성')); const btn = document.createElement('button'); btn.className = 'w-full bg-[hsl(var(--ac))]/90 hover:bg-[hsl(var(--ac))] rounded-xl py-2.5 font-medium'; btn.textContent = '✨ 프롬프트 생성'; btn.onclick = () => { const prompt = buildAIPrompt(); showResult(prompt, 'ai', btn) }; card.appendChild(btn) }
