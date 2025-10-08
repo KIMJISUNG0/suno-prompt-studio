@@ -9,7 +9,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 
-const GEM_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
+// Gemini API 키를 코드에 직접 삽입
+const GEM_API_KEY = 'AIzaSyD5a-tlQDGxE7BRamVmVbmwsUxmCzdnYdM';
 const PRIMARY_MODEL = (process.env.GEMINI_MODEL || 'gemini-pro').trim();
 const RAW_FALLBACKS = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-pro').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -18,10 +19,26 @@ const FALLBACK_MODELS = Array.from(new Set([ cleanName(PRIMARY_MODEL), ...RAW_FA
 
 const DEBUG = String(process.env.DEBUG_ERRORS || '').toLowerCase() === '1';
 
+// 주요 악기 우선순위 리스트
+const corePriority = ['Piano', 'Breakbeat Drums', 'Reese Bass', 'Sub Bass', 'Atmos Pad', 'Synth Lead', 'Amen Break'];
+
+function sortCore(coreList) {
+  return corePriority.filter(i => coreList.includes(i)).concat(coreList.filter(i => !corePriority.includes(i)));
+}
+
 async function genWithModel(model, prompt) {
+  // CORE 항목 자동 정렬
+  let sortedPrompt = prompt;
+  const coreMatch = prompt.match(/CORE:\s*([^|]*)/i);
+  if (coreMatch) {
+    const coreRaw = coreMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+    const sortedCore = sortCore(coreRaw);
+    sortedPrompt = prompt.replace(/CORE:\s*([^|]*)/i, `CORE: ${sortedCore.join(', ')}`);
+  }
+
   const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(GEM_API_KEY)}`;
   const body = {
-    contents: [{ role: "user", parts: [{ text: prompt }]}]
+    contents: [{ role: "user", parts: [{ text: sortedPrompt }]}]
   };
   const r = await fetch(url, {
     method: 'POST',
