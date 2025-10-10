@@ -171,11 +171,13 @@
     const loadingInterval = setInterval(() => { messageIndex = (messageIndex + 1) % loadingMessages.length; btn.textContent = loadingMessages[messageIndex]; }, 800);
     result.innerHTML = `<div class='grid grid-cols-1 md:grid-cols-2 gap-4'><div class='glass rounded-2xl p-4'><h3 class='text-base font-semibold mb-2'>로컬 프롬프트</h3><pre id='local-prompt' class='whitespace-pre-wrap text-sm leading-relaxed bg-black/30 rounded-xl p-3 border border-white/10'>${localPrompt}</pre></div><div class='glass rounded-2xl p-4'><h3 class='text-base font-semibold mb-2'>Gemini 보강 프롬프트</h3><div id='gemini-result-wrapper' class='min-h-[100px] flex items-center justify-center bg-black/30 rounded-xl p-3 border border-white/10'><div class="loader"></div></div></div></div><div class='mt-4 flex gap-2 justify-end'><button id='cpy' class='iconbtn rounded-lg px-3 py-1.5 text-sm'>모두 복사</button><button id='savePrompt' class='iconbtn rounded-lg px-3 py-1.5 text-sm'>JSON 저장</button></div>`;
     const geminiWrapper = document.getElementById('gemini-result-wrapper');
-    const geminiResultText = await callGeminiAPI(localPrompt);
-    clearInterval(loadingInterval); btn.disabled = false; btn.textContent = originalText;
-    geminiWrapper.innerHTML = `<pre id='gemini-prompt' class='whitespace-pre-wrap text-sm leading-relaxed'>${geminiResultText}</pre>`;
-    document.getElementById('cpy').onclick = () => { const combined = `// 로컬 프롬프트\n${localPrompt}\n\n// Gemini 보강 프롬프트\n${geminiResultText}`; navigator.clipboard.writeText(combined).then(() => showToast('두 프롬프트가 복사되었습니다.')).catch(() => showToast('복사 실패')) };
-    document.getElementById('savePrompt').onclick = () => { const data = { mode, ts: Date.now(), localPrompt, geminiPrompt: geminiResultText }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `prompt_${mode}_${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url) }
+  const geminiResultText = await callGeminiAPI(localPrompt);
+  clearInterval(loadingInterval); btn.disabled = false; btn.textContent = originalText;
+  // Gemini API가 에러일 경우에도 안내 메시지 표시
+  const safeGeminiText = geminiResultText && typeof geminiResultText === 'string' && geminiResultText.trim() ? geminiResultText : 'Gemini API 결과 없음 또는 오류';
+  geminiWrapper.innerHTML = `<pre id='gemini-prompt' class='whitespace-pre-wrap text-sm leading-relaxed'>${safeGeminiText}</pre>`;
+  document.getElementById('cpy').onclick = () => { const combined = `// 로컬 프롬프트\n${localPrompt}\n\n// Gemini 보강 프롬프트\n${safeGeminiText}`; navigator.clipboard.writeText(combined).then(() => showToast('두 프롬프트가 복사되었습니다.')).catch(() => showToast('복사 실패')) };
+  document.getElementById('savePrompt').onclick = () => { const data = { mode, ts: Date.now(), localPrompt, geminiPrompt: safeGeminiText }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `prompt_${mode}_${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url) }
   }
   function genPRO(btn) { const blocks = []; ['rhythm', 'bass', 'harmony', 'lead', 'percussion', 'fx', 'kick', 'snare', 'hihat', 'clap', 'cymbal'].forEach(k => { if (tracks[k]?.length) blocks.push(`${k.toUpperCase()}: ${tracks[k].join(', ')}`) }); const p = blocks.filter(Boolean).join(' | '); showResult(p, 'pro', btn) }
   let mode = 'ai';
